@@ -56,7 +56,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 
 
 <p><em>Practical Machine Learning Course by Johns Hopkins University, published on Coursera.org</em></p>
-<p><strong>Student: A. B.</strong></p>
+<p><strong>Student: axbff</strong></p>
 <div id="summary" class="section level2">
 <h2>Summary</h2>
 <p>In this project we use <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">Weight Lifting Exercises Dataset</a> (taken from the work of Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H., <a href="http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201">Qualitative Activity Recognition of Weight Lifting Exercises</a>) to predict how well people perform weight lifting excercises based on data collected by portable monitoring devices (mostly accelerometers) attached to parts of their body.</p>
@@ -98,11 +98,11 @@ max(modelFit_40$resample$Accuracy)</code></pre>
 <pre><code>## [1] 0.6440678</code></pre>
 <p>We see that size 40 is too small for randomForest to be able to calculate cross-validation accuracy. However, for size 160, cross-validation accuracy already seems quite good, considering that there are almost 20,000 observations in our dataset. Let’s now look at out-of-sample accuracies of these models on the whole training set:</p>
 <pre class="r"><code>mean(predict(modelFit_40, newdata = tr) == tr$classe)</code></pre>
-<pre><code>## [1] 0.3983794</code></pre>
+<pre><code>## [1] 0.3983284</code></pre>
 <pre class="r"><code>mean(predict(modelFit_80, newdata = tr) == tr$classe)</code></pre>
-<pre><code>## [1] 0.5723168</code></pre>
+<pre><code>## [1] 0.5724697</code></pre>
 <pre class="r"><code>mean(predict(modelFit_160, newdata = tr)== tr$classe)</code></pre>
-<pre><code>## [1] 0.6840791</code></pre>
+<pre><code>## [1] 0.6836714</code></pre>
 <p>Now, when we got a working prototype of the model, it’s time to run it on some reasonable sample size and start using it.</p>
 <p>For the purpose of predicting the test dataset provided by the course instructors, I have used four different models: two of them were trained on random samples of size <strong>1000</strong>, another two were trained on <strong>2000</strong>- and <strong>4000</strong>-sized samples respectively. However, I did not calculate proximity matrix (<strong>proximity = FALSE</strong>). Fitting these four models took less than 30 minutes on my Core i7 Lenovo X220 laptop with 8GB of RAM. Here are cross-validation accuracies that I got:</p>
 <pre><code>&gt; max(modelFit1000_1$resample$Accuracy)
