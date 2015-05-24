@@ -1,0 +1,95 @@
+---
+title: "Predicting quality of physical excercises with accelerometer data"
+output: html_document
+---
+
+*Practical Machine Learning Course by Johns Hopkins University, published on Coursera.org*
+
+**Student: axbff**
+
+## Summary
+
+In this project we use [Weight Lifting Exercises Dataset](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv) (taken from the work of Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H., [Qualitative Activity Recognition of Weight Lifting Exercises](http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201)) to predict how well people perform weight lifting excercises based on data collected by portable monitoring devices (mostly accelerometers) attached to parts of their body.
+
+## Preparing Data
+
+After we have downloaded the dataset, we need to correctly read it into R, excluding NA's and empty strings:
+
+```{r}
+tr = read.csv("pml-training.csv", na.strings = c("","NA","#DIV/0!"))
+```
+
+Looking at the dataset, we can conclude that many columns are filled mostly with NA values with just a few numeric observations. We are going to exclude those from our training model. Also, we see that first 7 columns contain index numbers, user names, timestamps, and other secondary data that is not directly related to excercise monitoring. We are also going to exclude this data to avoid overfitting our model. Let's prepare a list of columns to be excluded:
+
+```{r}
+cols = apply(tr, 2, function(x){mean(!is.na(x))})
+cols = which(cols > 0.1)
+cols = cols[cols > 7]
+```
+
+##Fitting Models
+
+Now we are ready to fit our model. We'll start with randomly sampling small number of rows and increase it gradually, looking at cross-validation and out-of-sample accuracy of our model, to find a reasonable balance between fit time and accuracy. You can use **doParallel** library for R to exploit several CPU cores making the process a bit faster, depending on your machine's configuration. This functionality can be enabled by installing the library and running the following code:
+
+```
+library(doParallel)
+registerDoParallel(number_of_CPU_cores_to_be_used)
+```
+
+We're not going to use this option in our report however, to avoid issues with knitr compiler. The prediction algorithm we will be using is Random Forest. Let's now look at some fitting times:
+
+```{r, warning=FALSE, cache=TRUE, message=FALSE}
+library(caret)
+system.time(train(classe ~ ., data = tr[sample(1:nrow(tr), 40), cols], method = "rf", proximity = T))
+system.time(train(classe ~ ., data = tr[sample(1:nrow(tr), 80), cols], method = "rf", proximity = T))
+system.time(train(classe ~ ., data = tr[sample(1:nrow(tr), 160), cols], method = "rf", proximity = T))
+```
+
+We see that fitting time seems to be increasing faster than the number of samples. Let's now look at model accuracies:
+
+```{r, warning=FALSE, cache=TRUE, message=FALSE}
+modelFit_40 = train(classe ~ ., data = tr[sample(1:nrow(tr), 40), cols], method = "rf", proximity = T)
+modelFit_80 = train(classe ~ ., data = tr[sample(1:nrow(tr), 80), cols], method = "rf", proximity = T)
+modelFit_160 = train(classe ~ ., data = tr[sample(1:nrow(tr), 160), cols], method = "rf", proximity = T)
+max(modelFit_40$resample$Accuracy)
+max(modelFit_80$resample$Accuracy)
+max(modelFit_160$resample$Accuracy)
+```
+
+We see that size 40 is too small for randomForest to be able to calculate cross-validation accuracy. However, for size 160, cross-validation accuracy already seems quite good, considering that there are almost 20,000 observations in our dataset. Let's now look at out-of-sample accuracies of these models on the whole training set:
+
+```{r, warning=FALSE, message=FALSE}
+mean(predict(modelFit_40, newdata = tr) == tr$classe)
+mean(predict(modelFit_80, newdata = tr) == tr$classe)
+mean(predict(modelFit_160, newdata = tr)== tr$classe)
+```
+
+Now, when we got a working prototype of the model, it's time to run it on some reasonable sample size and start using it.
+
+For the purpose of predicting the test dataset provided by the course instructors, I have used four different models: two of them were trained on random samples of size **1000**, another two were trained on **2000**- and **4000**-sized samples respectively. However, I did not calculate proximity matrix (**proximity = FALSE**). Fitting these four models took less than 30 minutes on my Core i7 Lenovo X220 laptop with 8GB of RAM. Here are cross-validation accuracies that I got:
+
+```
+> max(modelFit1000_1$resample$Accuracy)
+[1] 0.9032258
+> max(modelFit1000_2$resample$Accuracy)
+[1] 0.8997361
+> max(modelFit2000$resample$Accuracy)
+[1] 0.9465021
+> max(modelFit4000$resample$Accuracy)
+[1] 0.9728261
+```
+
+Here are my actual out-of-sample accuracies on the training dataset:
+```
+> mean(predict(modelFit1000_1, newdata = tr) == tr$classe)
+[1] 0.9081643
+> mean(predict(modelFit1000_2, newdata = tr) == tr$classe)
+[1] 0.92381
+> mean(predict(modelFit2000, newdata = tr) == tr$classe)
+[1] 0.9604016
+> mean(predict(modelFit4000, newdata = tr) == tr$classe)
+[1] 0.9747223
+```
+## Results
+
+Out of **20** test cases, **4 cases had different predictions** between the four of my models, another **16 cases had been predicted identically** by all four models. For cases having different predictions I used predictions of the more powerful 4000-sampled model and got them correct. For **15** of 16 identically predicted cases the values were **correct**. One of those 16 cases, however, didn't work. I had to create another 1000-sampled model, but now with **proximity** matrix calculation set to **TRUE**. This last model gave me an alternative prediction for the problem case, which happened to be a correct one. **Overall, all my 20 predictions happend to be correct, 18 of them were correct on the first attempt.**
